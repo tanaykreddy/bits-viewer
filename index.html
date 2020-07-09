@@ -103,13 +103,13 @@
 
         @media (max-width: 649px) {
             h1 {
-                font-size: 3.6em;
+                font-size: 4.8em;
             }
 
             textarea,
             input,
             #output-data {
-                font-size: 0.9em;
+                font-size: 1.2em;
             }
         }
     </style>
@@ -122,9 +122,9 @@
 
     <textarea type='text' id='input-data' placeholder='Hexadecimal String Input'></textarea>
 
-    <input type='number' id='input-split' placeholder='Highlight Bit Width'>
+    <input type='number' id='input-split' placeholder='Split Size'>
 
-    <input type='number' id='input-start' placeholder='Highlight Start Bit'>
+    <input type='number' id='input-start' placeholder='Start Bit'>
 
     <br><br>
 
@@ -138,8 +138,19 @@
 
             if (isNaN(splitSize))
                 splitSize = 16;
+            else if (splitSize < 1) {
+                showError();
+                return;
+            }
+
+
             if (isNaN(startBit))
                 startBit = 0;
+            else if (startBit < 0) {
+                showError();
+                return;
+            }
+
 
             var finalText = "";
             for (var i = 0; i < fullText.length; i++) {
@@ -166,6 +177,11 @@
                 for (var j = start; j < inputText.length; j += splitSize) {
                     outputText += addHighlight(makeHexString(inputText.substring(j, j + splitSize)), highlightType);
                     highlightType = highlightType % 2 + 1;
+                }
+
+                if (outputText.includes("undefined")) {
+                    showError();
+                    return;
                 }
 
                 finalText += outputText + "<br><br>";
@@ -224,6 +240,10 @@
             }
 
             return hexString;
+        }
+
+        function showError() {
+            document.querySelector("#output-data").innerHTML = "<span style='color: red'>ERROR: INVALID INPUT</span>";
         }
 
         document.querySelector("#input-data").addEventListener('input', display);
