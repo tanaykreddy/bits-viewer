@@ -23,7 +23,7 @@
             background-color: black;
         }
 
-        header>h1 {
+        h1 {
             font-family: 'Oswald', sans-serif;
             font-size: 6em;
             color: white;
@@ -32,7 +32,6 @@
 
         textarea {
             font-family: 'Courier Prime', monospace;
-            font-size: 1.5em;
             float: left;
             width: 100%;
             height: 5.1em;
@@ -55,19 +54,24 @@
 
         input {
             font-family: 'Courier Prime', monospace;
-            font-size: 1.5em;
             float: left;
             width: 50%;
             height: 2em;
-            border-width: 0 5px 5px 0;
             border-color: black;
             padding: 5px;
         }
 
-        #output-nibbles {
+        #input-split {
+            border-width: 0 5px 5px 0;
+        }
+
+        #input-start {
+            border-width: 0 0 5px 0;
+        }
+
+        #output-data {
             clear: both;
             font-family: 'Courier Prime', monospace;
-            font-size: 1.5em;
             overflow-wrap: break-word;
             text-align: right;
             padding: 25px 5px 5px 5px;
@@ -84,6 +88,30 @@
         .highlight-2 {
             background-color: #A4C2F4;
         }
+
+        @media (min-width: 650px) {
+            h1 {
+                font-size: 6em;
+            }
+
+            textarea,
+            input,
+            #output-data {
+                font-size: 1.5em;
+            }
+        }
+
+        @media (max-width: 649px) {
+            h1 {
+                font-size: 3.6em;
+            }
+
+            textarea,
+            input,
+            #output-data {
+                font-size: 0.9em;
+            }
+        }
     </style>
 </head>
 
@@ -92,68 +120,66 @@
         <h1>Bits Viewer</h1>
     </header>
 
-    <textarea type='text' id='input-nibbles' placeholder='Hexadecimal String Input'></textarea>
+    <textarea type='text' id='input-data' placeholder='Hexadecimal String Input'></textarea>
 
-    <input type='number' id='input-chunks' placeholder='Highlight Width'>
+    <input type='number' id='input-split' placeholder='Highlight Bit Width'>
 
-    <input type='number' id='start-nibble' placeholder='Highlight Start Bit'>
+    <input type='number' id='input-start' placeholder='Highlight Start Bit'>
 
     <br><br>
 
-    <div id='output-nibbles'></div>
+    <div id='output-data'></div>
 
     <script>
         function display() {
-            fullText = document.querySelector("#input-nibbles").value.split("\n");
-            chunkSize = document.querySelector("#input-chunks").value;
-            startNibble = Math.floor(document.querySelector("#start-nibble").value);
+            var fullText = document.querySelector("#input-data").value.split("\n");
+            var splitSize = parseInt(document.querySelector("#input-split").value);
+            var startBit = parseInt(document.querySelector("#input-start").value);
 
-            document.querySelector("#output-nibbles").innerHTML = "";
+            if (isNaN(splitSize))
+                splitSize = 16;
+            if (isNaN(startBit))
+                startBit = 0;
 
-            totalChars = 0;
-            highlightType = 1;
-            highlightChange = false;
-            for (i = 0; i < fullText.length; i++) {
-                inputText = fullText[i].replace(/\s/g, '');
+            var finalText = "";
+            for (var i = 0; i < fullText.length; i++) {
 
-                inputText = convert(inputText, startNibble);
+                var inputText = makeBinString(fullText[i].replace(/\s/g, ''));
+                var outputText = "";
 
-                console.log(inputText);
-
-                outputText = "";
-
-                curChars = 0;
-                for (j = inputText.length - 1; j >= 0; j--) {
-                    if (curChars < chunkSize) {
-                        if (highlightType == 2)
-                            highlightChange = true;
-                        else
-                            highlightChange = false;
-
-                        highlightType = 1;
-                    }
-                    else {
-                        if (highlightType == 1)
-                            highlightChange = true;
-                        else
-                            highlightChange = false;
-
-                        highlightType = 2;
-                    }
-
-                    curChars = (curChars + 1) % (2 * chunkSize);
-
-                    outputText = "<span class='highlight-" + highlightType + "'>" + inputText.charAt(j) + "</span>" + (highlightChange ? "<span style='font-size: 0.5em'>&nbsp;</span>" : "") + outputText;
-
-                    totalChars++;
+                if (startBit >= inputText.length) {
+                    startBit -= inputText.length;
+                    continue;
                 }
+                else if (startBit > 0) {
+                    inputText = inputText.substring(0, inputText.length - startBit);
+                    startBit = 0;
+                }
+
+                var highlightType = 1;
+                var start = inputText.length % splitSize;
+                if (start != 0) {
+                    outputText += addHighlight(makeHexString(inputText.substring(0, start)), highlightType);
+                    highlightType = highlightType % 2 + 1;
+                }
+
+                for (var j = start; j < inputText.length; j += splitSize) {
+                    outputText += addHighlight(makeHexString(inputText.substring(j, j + splitSize)), highlightType);
+                    highlightType = highlightType % 2 + 1;
+                }
+
+                finalText += outputText + "<br><br>";
             }
 
-            document.querySelector("#output-nibbles").innerHTML += outputText + "<br><br>";
+            document.querySelector("#output-data").innerHTML = finalText;
+        }
+
+        function addHighlight(innerHTML, highlightType) {
+            return "<span class='highlight-" + highlightType + "'>" + innerHTML + "</span><span style='font-size: 0.5em'>&nbsp;</span>";
         }
 
         function hexToBin(hexChar) {
-            table = {
+            var table = {
                 '0': '0000', '1': '0001', '2': '0010', '3': '0011',
                 '4': '0100', '5': '0101', '6': '0110', '7': '0111',
                 '8': '1000', '9': '1001', 'A': '1010', 'B': '1011',
@@ -166,7 +192,7 @@
         }
 
         function binToHex(binString) {
-            table = {
+            var table = {
                 '0000': '0', '0001': '1', '0010': '2', '0011': '3',
                 '0100': '4', '0101': '5', '0110': '6', '0111': '7',
                 '1000': '8', '1001': '9', '1010': 'A', '1011': 'B',
@@ -176,30 +202,33 @@
             return table[binString];
         }
 
-        function convert(inputString, startBit) {
-            hexString = "";
-            for (i = 0; i < inputString.length; i++) {
-                hexString += hexToBin(inputString.charAt(i));
+        function makeBinString(hexString) {
+            var binString = "";
+
+            for (i = 0; i < hexString.length; i++) {
+                binString += hexToBin(hexString.charAt(i));
             }
 
-            outputString = "";
-            for (i = hexString.length - startBit; i >= 4; i -= 4) {
-                outputString = binToHex(hexString.substring(i - 4, i)) + outputString;
-            }
-
-            console.log(i);
-            
-            first = hexString.substring(0, i).padStart(4, '0')
-
-            if (first != "0000")
-                outputString = binToHex(first) + outputString;
-
-            return outputString;
+            return binString.substring(0, binString.length);
         }
 
-        document.querySelector("#input-nibbles").addEventListener('input', display);
-        document.querySelector("#input-chunks").addEventListener('input', display);
-        document.querySelector("#start-nibble").addEventListener('input', display);
+        function makeHexString(binString) {
+            var hexString = "";
+
+            var start = binString.length % 4;
+            if (start != 0)
+                hexString += binToHex(binString.substring(0, start).padStart(4, "0"));
+
+            for (i = start; i < binString.length; i += 4) {
+                hexString += binToHex(binString.substring(i, i + 4));
+            }
+
+            return hexString;
+        }
+
+        document.querySelector("#input-data").addEventListener('input', display);
+        document.querySelector("#input-split").addEventListener('input', display);
+        document.querySelector("#input-start").addEventListener('input', display);
     </script>
 </body>
 
